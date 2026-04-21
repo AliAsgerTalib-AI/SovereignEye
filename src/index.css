@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Manrope:wght@400;500;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Georgia", serif;
+  --font-body: "Helvetica Neue", "Arial", sans-serif;
+  --font-mono: "Courier New", monospace;
+  
+  --color-primary-fixed-dim: #ffd700;
+  --color-on-primary: #050208;
+  --color-on-tertiary: #000000;
+  --color-tertiary-container: #ffd700;
+  --color-surface-container-lowest: #050208;
+  --color-surface-container-highest: #1a0b2e;
+  --color-tertiary: #ffd700;
+  --color-on-background: #e0d8d0;
+  --color-background: #050208;
+  --color-surface-container-low: rgba(20, 10, 30, 0.4);
+  --color-surface-container-high: rgba(20, 10, 30, 0.6);
+  --color-outline-variant: rgba(255, 215, 0, 0.15);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-background font-body min-h-screen selection:bg-tertiary/20;
+  }
+}
+
+.atmosphere {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 30%, #1a0b2e 0%, transparent 60%),
+              radial-gradient(circle at 10% 80%, #2a0d0d 0%, transparent 50%);
+  filter: blur(60px);
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.glass-panel {
+  @apply bg-[rgba(20,10,30,0.4)] backdrop-blur-2xl border border-[rgba(255,215,0,0.15)] rounded-[24px] shadow-[0_0_40px_rgba(0,0,0,0.5)];
+}
+
+.tarot-card-theme {
+  @apply rounded-xl border-2 border-[rgba(255,215,0,0.3)] bg-linear-to-br from-[#12081a] to-[#0a050d] shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300;
+}
+
+.gold-shimmer {
+  @apply bg-[#ffd700] text-[#050208] shadow-[0_0_20px_rgba(255,215,0,0.2)];
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}

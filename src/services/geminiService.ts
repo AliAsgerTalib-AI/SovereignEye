@@ -1,4 +1,7 @@
+import { GoogleGenAI } from "@google/genai";
 import { UserDetails, TarotCard } from "../types";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function interpretSpread(
   userDetails: UserDetails,
@@ -32,19 +35,18 @@ export async function interpretSpread(
   `;
 
   try {
-    const response = await fetch('/api/interpret', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
-    
-    if (!response.ok) throw new Error('Server returned an error');
-    
-    const data = await response.json();
-    return data.text || "The stars are silent for now. Try again later.";
-  } catch (error) {
+    return response.text || "The stars are silent for now. Try again later.";
+  } catch (error: any) {
     console.error("Gemini Error:", error);
-    return "The veil is thick, and the spirits are elusive. Trust your own inner light.";
+    const detail = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+    if (!process.env.GEMINI_API_KEY) {
+      return `The connection to the archive is severed. Ensure GEMINI_API_KEY is configured. (Error: ${detail})`;
+    }
+    return `The veil is thick, and the spirits are elusive. (Error: ${detail})`;
   }
 }
 
@@ -65,18 +67,17 @@ export async function getCardDetails(card: TarotCard, userDetails: UserDetails):
   `;
 
   try {
-    const response = await fetch('/api/card-details', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
-    
-    if (!response.ok) throw new Error('Server returned an error');
-    
-    const data = await response.json();
-    return data.text || "No further details available in the archive.";
-  } catch (error) {
+    return response.text || "No further details available in the archive.";
+  } catch (error: any) {
     console.error("Gemini Details Error:", error);
-    return "Error retrieving nuanced archival data.";
+    const detail = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+    if (!process.env.GEMINI_API_KEY) {
+      return `Archive access restricted. GEMINI_API_KEY is missing. (Error: ${detail})`;
+    }
+    return `Error retrieving nuanced archival data. (Error: ${detail})`;
   }
 }

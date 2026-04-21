@@ -1,7 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-import { UserDetails, TarotCard, CardPosition, TarotLineage } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+import { UserDetails, TarotCard } from "../types";
 
 export async function interpretSpread(
   userDetails: UserDetails,
@@ -35,11 +32,16 @@ export async function interpretSpread(
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    const response = await fetch('/api/interpret', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
     });
-    return response.text || "The stars are silent for now. Try again later.";
+    
+    if (!response.ok) throw new Error('Server returned an error');
+    
+    const data = await response.json();
+    return data.text || "The stars are silent for now. Try again later.";
   } catch (error) {
     console.error("Gemini Error:", error);
     return "The veil is thick, and the spirits are elusive. Trust your own inner light.";
@@ -63,11 +65,16 @@ export async function getCardDetails(card: TarotCard, userDetails: UserDetails):
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    const response = await fetch('/api/card-details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
     });
-    return response.text || "No further details available in the archive.";
+    
+    if (!response.ok) throw new Error('Server returned an error');
+    
+    const data = await response.json();
+    return data.text || "No further details available in the archive.";
   } catch (error) {
     console.error("Gemini Details Error:", error);
     return "Error retrieving nuanced archival data.";

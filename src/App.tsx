@@ -5,11 +5,11 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { History, UserCircle, Sparkles, BookOpen, LineChart, Clock, Moon, CloudLightning, Star, Sun } from 'lucide-react';
+import { History, UserCircle, Sparkles, BookOpen, LineChart, Clock, Moon, CloudLightning, Star, Sun, X, Info } from 'lucide-react';
 import { UserDetails, TarotCard, ReadingResult } from './types';
 import { TAROT_DECK } from './constants';
 import { shuffle } from './utils';
-import { interpretSpread } from './services/geminiService';
+import { interpretSpread, getCardDetails } from './services/geminiService';
 
 type Step = 'entrance' | 'shuffling' | 'reading';
 
@@ -21,6 +21,7 @@ export default function App() {
     question: '',
   });
   const [reading, setReading] = useState<ReadingResult | null>(null);
+  const [selectedCard, setSelectedCard] = useState<TarotCard | null>(null);
 
   const startReading = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,8 @@ export default function App() {
     setReading({
       cards: selected.map(s => ({
         ...s,
-        insight: s.card.meaning
+        insight: s.card.meaning,
+        isRevealed: false
       })),
       spiritsAnswer: interpretation
     });
@@ -52,6 +54,7 @@ export default function App() {
   const reset = () => {
     setStep('entrance');
     setReading(null);
+    setSelectedCard(null);
   };
 
   return (
@@ -87,11 +90,18 @@ export default function App() {
           )}
           {step === 'reading' && reading && (
             <div className="glass-panel w-full p-12 lg:p-20">
-              <ReadingView reading={reading} userDetails={userDetails} onReset={reset} />
+              <ReadingView reading={reading} userDetails={userDetails} onReset={reset} onCardClick={setSelectedCard} setReading={setReading} />
             </div>
           )}
         </AnimatePresence>
       </main>
+
+      {/* Card Detail Modal */}
+      <AnimatePresence>
+        {selectedCard && (
+          <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
+        )}
+      </AnimatePresence>
 
       {/* Footer Stats - Thematic Alignment */}
       <footer className="fixed bottom-10 w-full flex justify-center gap-12 z-50 pointer-events-none opacity-60">
@@ -109,6 +119,95 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function CardDetailModal({ card, onClose }: { card: TarotCard, onClose: () => void }) {
+  const [details, setDetails] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    getCardDetails(card).then(data => {
+      if (active) {
+        setDetails(data);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, [card]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/80 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="glass-panel max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8 lg:p-12 relative"
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-6 right-6 text-on-surface-variant/60 hover:text-tertiary transition-colors"
+        >
+          <X className="w-8 h-8" />
+        </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+          <div className="aspect-[2/3.2] tarot-card-theme p-4">
+            <div className="w-full h-full rounded-lg overflow-hidden">
+              <img 
+                src={card.image} 
+                alt={card.name} 
+                className="w-full h-full object-cover grayscale-[0.2]"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-8 h-full flex flex-col pt-12 md:pt-0">
+            <div className="space-y-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-tertiary/60">Archival Record</p>
+              <h2 className="font-serif text-4xl md:text-5xl text-tertiary tracking-widest uppercase">{card.name}</h2>
+              <div className="h-[1px] w-20 bg-tertiary/30" />
+            </div>
+
+            <div className="space-y-6 flex-1">
+              <div className="p-6 bg-white/[0.03] rounded-2xl border border-tertiary/5">
+                <p className="text-tertiary/80 text-sm font-body tracking-[0.1em] uppercase mb-2 font-bold">Core Meaning</p>
+                <p className="text-on-background/80">{card.meaning}</p>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-tertiary/80 text-sm font-body tracking-[0.1em] uppercase font-bold">Deep Archive Insights</p>
+                {loading ? (
+                  <div className="space-y-3">
+                    <div className="h-4 bg-white/5 rounded w-full animate-pulse" />
+                    <div className="h-4 bg-white/5 rounded w-5/6 animate-pulse" />
+                    <div className="h-4 bg-white/5 rounded w-4/6 animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="text-on-background/70 font-body text-sm leading-relaxed space-y-4 whitespace-pre-wrap italic">
+                    {details}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button 
+              onClick={onClose}
+              className="gold-shimmer w-full py-4 rounded-full font-serif font-bold tracking-[0.3em] uppercase text-xs"
+            >
+              Close Inquiry
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -271,7 +370,20 @@ function ShufflingView() {
   );
 }
 
-function ReadingView({ reading, userDetails, onReset }: { reading: ReadingResult, userDetails: UserDetails, onReset: () => void }) {
+function ReadingView({ reading, userDetails, onReset, onCardClick, setReading }: { 
+  reading: ReadingResult, 
+  userDetails: UserDetails, 
+  onReset: () => void, 
+  onCardClick: (card: TarotCard) => void,
+  setReading: React.Dispatch<React.SetStateAction<ReadingResult | null>>
+}) {
+  const toggleReveal = (index: number) => {
+    if (!reading) return;
+    const newCards = [...reading.cards];
+    newCards[index] = { ...newCards[index], isRevealed: !newCards[index].isRevealed };
+    setReading({ ...reading, cards: newCards });
+  };
+
   return (
     <motion.div 
       key="reading"
@@ -294,31 +406,97 @@ function ReadingView({ reading, userDetails, onReset }: { reading: ReadingResult
             transition={{ delay: i * 0.3 }}
             className="flex flex-col h-full"
           >
-            <div className="group relative aspect-[2/3.2] tarot-card-theme p-4 overflow-hidden mb-8">
-              <div className="absolute inset-4 border border-tertiary/10 rounded-lg pointer-events-none z-20" />
-              <div className="w-full h-full rounded-lg overflow-hidden relative">
-                <img 
-                  src={pos.card.image} 
-                  alt={pos.card.name} 
-                  className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-1000 grayscale-[0.2]"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-[#050208] via-transparent to-transparent opacity-80" />
-              </div>
-              <div className="absolute top-8 left-0 w-full flex justify-center z-30">
-                <span className="font-mono text-[9px] uppercase tracking-[0.3em] px-4 py-1.5 bg-tertiary/10 backdrop-blur-xl rounded-full border border-tertiary/20 text-tertiary">
-                  {pos.label}
-                </span>
-              </div>
-              <div className="absolute bottom-10 left-0 w-full px-6 text-center z-30">
-                <h2 className="font-serif text-2xl text-tertiary tracking-widest uppercase drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">{pos.card.name}</h2>
-              </div>
+            <div className="perspective-1000 aspect-[2/3.2] mb-8 relative group">
+              <motion.div
+                initial={false}
+                animate={{ rotateY: pos.isRevealed ? 0 : 180 }}
+                transition={{ duration: 0.8, type: "spring", stiffness: 260, damping: 20 }}
+                className="w-full h-full relative preserve-3d cursor-pointer"
+                onClick={() => {
+                  if (!pos.isRevealed) {
+                    toggleReveal(i);
+                  } else {
+                    onCardClick(pos.card);
+                  }
+                }}
+              >
+                {/* Front Side (Face Up) */}
+                <div className="absolute inset-0 backface-hidden z-10">
+                  <div className="tarot-card-theme p-4 w-full h-full overflow-hidden shadow-[0_0_50px_rgba(255,215,0,0.1)] group-hover:shadow-[0_0_50px_rgba(255,215,0,0.2)] transition-shadow">
+                    <div className="absolute inset-4 border border-tertiary/10 rounded-lg pointer-events-none z-20" />
+                    <div className="w-full h-full rounded-lg overflow-hidden relative">
+                      <img 
+                        src={pos.card.image} 
+                        alt={pos.card.name} 
+                        className="w-full h-full object-cover opacity-70 grayscale-[0.2]"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-linear-to-t from-[#050208] via-transparent to-transparent opacity-80" />
+                      
+                      {/* Info Overlay on Hover */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300 z-40 bg-background/20 backdrop-blur-[2px]">
+                        <div className="bg-tertiary/20 backdrop-blur-md rounded-full p-4 border border-tertiary/40">
+                          <Info className="w-6 h-6 text-tertiary" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute top-8 left-0 w-full flex justify-center z-30">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.3em] px-4 py-1.5 bg-tertiary/10 backdrop-blur-xl rounded-full border border-tertiary/20 text-tertiary">
+                        {pos.label}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-10 left-0 w-full px-6 text-center z-30">
+                      <h2 className="font-serif text-2xl text-tertiary tracking-widest uppercase drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">{pos.card.name}</h2>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Back Side (Face Down) */}
+                <div 
+                  className="absolute inset-0 backface-hidden rotate-y-180 z-0"
+                >
+                  <div className="tarot-card-theme p-3 w-full h-full bg-linear-to-br from-background to-black border-tertiary/30 shadow-[0_0_30px_rgba(255,215,0,0.05)] hover:shadow-[0_0_40px_rgba(255,215,0,0.15)] transition-shadow">
+                    <div className="w-full h-full m-1 border border-tertiary/10 rounded-lg flex flex-col items-center justify-center relative overflow-hidden bg-white/[0.02]">
+                       <div className="w-16 h-16 rounded-full border border-tertiary/20 flex items-center justify-center mb-6">
+                         <Sparkles className="w-8 h-8 text-tertiary opacity-30 animate-pulse" />
+                       </div>
+                       <p className="font-serif text-tertiary/30 text-[8px] tracking-[0.6em] uppercase font-bold mb-4">The Archive</p>
+                       <div className="h-[1px] w-12 bg-tertiary/20" />
+                       
+                       <Sun className="absolute top-4 left-4 w-3 h-3 text-tertiary/5" />
+                       <Sun className="absolute top-4 right-4 w-3 h-3 text-tertiary/5" />
+                       <Sun className="absolute bottom-4 left-4 w-3 h-3 text-tertiary/5" />
+                       <Sun className="absolute bottom-4 right-4 w-3 h-3 text-tertiary/5" />
+
+                       {/* Reveal Label Overlay (Bottom) */}
+                       <div className="absolute bottom-8 left-0 w-full flex justify-center opacity-40">
+                         <span className="font-mono text-[8px] uppercase tracking-[0.3em] text-tertiary">Tap to Reveal</span>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-            <div className="flex-1 flex flex-col justify-center text-center">
-              <p className="text-on-background/60 text-xs font-body tracking-[0.1em] leading-relaxed italic uppercase opacity-80">
-                {pos.insight}
-              </p>
-            </div>
+            
+            <AnimatePresence>
+              {pos.isRevealed && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex-1 flex flex-col justify-center text-center px-4"
+                >
+                  <p className="text-on-background/60 text-xs font-body tracking-[0.1em] leading-relaxed italic uppercase opacity-80">
+                    {pos.insight}
+                  </p>
+                  <button 
+                    onClick={() => toggleReveal(i)}
+                    className="mt-4 text-[9px] uppercase tracking-widest text-tertiary/40 hover:text-tertiary transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Moon className="w-3 h-3" /> Hide
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ))}
       </div>

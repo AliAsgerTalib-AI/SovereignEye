@@ -15,6 +15,7 @@ export interface CardPosition {
   card: TarotCard;
   label: 'Past' | 'Present' | 'Future';
   insight: string;
+  isRevealed: boolean;
 }
 
 export interface ReadingResult {

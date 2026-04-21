@@ -45,8 +45,30 @@
 }
 
 .tarot-card-theme {
-  @apply rounded-xl border-2 border-[rgba(255,215,0,0.3)] bg-linear-to-br from-[#12081a] to-[#0a050d] shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300;
+  @apply rounded-xl border-2 transition-all duration-500;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
 }
+
+/* Theme: Celestial Gold */
+.theme-celestial-gold .tarot-card-theme {
+  @apply border-[rgba(255,215,0,0.3)] bg-linear-to-br from-[#12081a] to-[#0a050d];
+}
+.theme-celestial-gold .card-accent { @apply text-[#ffd700]; }
+.theme-celestial-gold .card-border { @apply border-[#ffd700]/10; }
+
+/* Theme: Midnight Silver */
+.theme-midnight-silver .tarot-card-theme {
+  @apply border-[rgba(192,192,192,0.3)] bg-linear-to-br from-[#0a0f1a] to-[#05080d];
+}
+.theme-midnight-silver .card-accent { @apply text-[#c0c0c0]; }
+.theme-midnight-silver .card-border { @apply border-[#c0c0c0]/10; }
+
+/* Theme: Obsidian Crimson */
+.theme-obsidian-crimson .tarot-card-theme {
+  @apply border-[rgba(139,0,0,0.3)] bg-linear-to-br from-[#1a0505] to-[#0a0000];
+}
+.theme-obsidian-crimson .card-accent { @apply text-[#8b0000]; }
+.theme-obsidian-crimson .card-border { @apply border-[#8b0000]/10; }
 
 .gold-shimmer {
   @apply bg-[#ffd700] text-[#050208] shadow-[0_0_20px_rgba(255,215,0,0.2)];

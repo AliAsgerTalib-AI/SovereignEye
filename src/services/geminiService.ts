@@ -1,31 +1,43 @@
 import { GoogleGenAI } from "@google/genai";
-import { UserDetails, TarotCard, CardPosition } from "../types";
+import { UserDetails, TarotCard, CardPosition, TarotLineage } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function interpretSpread(
   userDetails: UserDetails,
-  cards: { position: 'Past' | 'Present' | 'Future', card: TarotCard }[]
+  cards: { position: string, card: TarotCard }[]
 ): Promise<string> {
+  const cardsSummary = cards.map(c => `- ${c.position}: ${c.card.name} (${c.card.meaning})`).join('\n');
+  
   const prompt = `
-    You are an expert Tarot reader at "The Celestial Archive". 
-    User Name: ${userDetails.name}
-    User Question: "${userDetails.question}"
+    Act as an expert Tarot reader with 20 years of experience doing tarot predictions, at "SovereignEye". 
     
-    Spread:
-    - Past: ${cards[0].card.name} (${cards[0].card.meaning})
-    - Present: ${cards[1].card.name} (${cards[1].card.meaning})
-    - Future: ${cards[2].card.name} (${cards[2].card.meaning})
+    [Protocol Activation]
+    User: ${userDetails.name} (Age: ${userDetails.age})
+    Question: "${userDetails.question}"
+    Lineage: ${userDetails.lineage}
+    Spread Pattern: ${userDetails.spreadType}
     
-    Provide a cohesive, mystical, and encouraging interpretation of this spread in relation to the user's question. 
-    Write exactly one paragraph as "The Spirits' Answer". 
-    Tone: Sophisticated, ethereal, and intuitive.
+    [The Draw]
+    ${cardsSummary}
+    
+    [Objective]
+    Analyze the user's inquiry through the lens of the ${userDetails.lineage} tradition. 
+    Synthesize the cards in their specific positions. 
+    Incorporate the user's age (${userDetails.age}) to calibrate the depth and perspective of the advice.
+    
+    [Response Requirements]
+    1. Acknowledge the selected spread and why it illuminates the inquiry.
+    2. Provide a cohesive, mystical, and accurate interpretation.
+    3. Conclude with "The Synthesis": a concise, resonant prediction not exceeding 200 words.
+    
+    Tone: Sophisticated, scholarly and deeply intuitive.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     return response.text || "The stars are silent for now. Try again later.";
   } catch (error) {
@@ -34,26 +46,30 @@ export async function interpretSpread(
   }
 }
 
-export async function getCardDetails(card: TarotCard): Promise<string> {
+export async function getCardDetails(card: TarotCard, userDetails: UserDetails): Promise<string> {
   const prompt = `
-    You are an expert Tarot historian and mystic at "The Celestial Archive".
-    Card Name: ${card.name}
-    Base Meaning: ${card.meaning}
+    Act as an expert Tarot reader with 20 years of experience doing tarot predictions, at "SovereignEye".
+    User Inquiry: "${userDetails.question}"
+    Card Being Explored: ${card.name}
+    Lineage Foundation: ${userDetails.lineage}
     
-    Provide a deep, poetic, and scholarly analysis of this card's symbolism, historical significance, and spiritual resonance. 
-    Focus on the visual elements of the card (Rider-Waite-Smith tradition) and what they represent.
-    Write two short paragraphs.
-    Tone: Sophisticated, mysterious, and insightful.
+    Provide an in-depth, nuanced, and scholarly analysis of this card's symbolism, historical significance, and spiritual resonance within the specific context of the ${userDetails.lineage} system. 
+    Crucially, relate these deeper meanings to the user's specific inquiry: "${userDetails.question}". 
+    Explore the visual archetypes and characteristic philosophies of the ${userDetails.lineage} tradition and how they specifically illuminate or challenge the user's path.
+    Go beyond surface-level keywords to provide a "nuanced interpretation" that weaves together the deck's heritage and the seeker's current flux.
+    
+    Format your response as three distinct, sophisticated paragraphs.
+    Tone:  academic yet intuitive, sophisticated, and deeply resonant.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
+      model: "gemini-3-flash-preview",
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     return response.text || "No further details available in the archive.";
   } catch (error) {
     console.error("Gemini Details Error:", error);
-    return "Error retrieving archival data.";
+    return "Error retrieving nuanced archival data.";
   }
 }
